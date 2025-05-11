@@ -1,0 +1,31 @@
+version: "2"
+linters:
+  default: all
+  disable:
+    - tagliatelle
+  settings:
+    depguard:
+      rules:
+        main:
+          allow:
+            - $gostd
+            - github.com/aws/aws-sdk-go-v2/aws
+            - github.com/aws/aws-sdk-go-v2/config
+            - github.com/aws/aws-sdk-go-v2/service/iam
+            - golang.org/x/sync/errgroup
+  exclusions:
+    generated: disable
+    rules:
+      - linters:
+          - err113
+          - exhaustruct
+          - funlen
+          - varnamelen
+        path: _test.go
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+    - golines
