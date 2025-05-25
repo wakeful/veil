@@ -10,12 +10,14 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
 	"os"
 	"sync"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"golang.org/x/sync/errgroup"
@@ -43,7 +45,7 @@ func main() {
 
 	ctx := context.Background()
 
-	client, err := NewApp(ctx, *region)
+	client, err := NewApp(ctx, *region, &DefaultConfigLoader{})
 	if err != nil {
 		slog.Error("failed to initialize app", slog.String("error", err.Error()))
 
@@ -86,9 +88,44 @@ type App struct {
 
 var _ iam.ListRolesAPIClient = (ServiceIAM)(nil)
 
+var errEmptyRegion = errors.New("region cannot be empty")
+
+// ConfigLoader defines an interface for loading AWS SDK configurations with customisable options.
+type ConfigLoader interface {
+	LoadDefaultConfig(
+		ctx context.Context,
+		optFns ...func(*config.LoadOptions) error,
+	) (cfg aws.Config, err error)
+}
+
+// DefaultConfigLoader provides functionality for loading default AWS SDK configurations with optional customisation.
+type DefaultConfigLoader struct{}
+
+// LoadDefaultConfig loads the default AWS SDK configuration with optional modifications using the provided option
+// functions.
+//
+//nolint:nonamedreturns
+func (d DefaultConfigLoader) LoadDefaultConfig(
+	ctx context.Context,
+	optFns ...func(*config.LoadOptions) error,
+) (cfg aws.Config, err error) {
+	return config.LoadDefaultConfig(ctx, optFns...) //nolint:wrapcheck
+}
+
+var _ ConfigLoader = (*DefaultConfigLoader)(nil)
+
 // NewApp initialises and returns a new App instance configured with the provided region and context.
-func NewApp(ctx context.Context, region string) (*App, error) {
-	cfg, err := config.LoadDefaultConfig(ctx,
+func NewApp(ctx context.Context, region string, loader ConfigLoader) (*App, error) {
+	if region == "" {
+		return nil, errEmptyRegion
+	}
+
+	if loader == nil {
+		loader = DefaultConfigLoader{}
+	}
+
+	cfg, err := loader.LoadDefaultConfig(
+		ctx,
 		config.WithRegion(region),
 	)
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 )
@@ -121,6 +122,75 @@ func TestApp_getRolesWithTrust(t *testing.T) {
 
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getRolesWithTrust() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+type mockConfigLoader struct {
+	mockConfig    aws.Config
+	mockConfigErr error
+}
+
+//nolint:nonamedreturns
+func (m *mockConfigLoader) LoadDefaultConfig(
+	_ context.Context,
+	_ ...func(*config.LoadOptions) error,
+) (cfg aws.Config, err error) {
+	return m.mockConfig, m.mockConfigErr
+}
+
+var _ ConfigLoader = (*mockConfigLoader)(nil)
+
+func TestNewApp(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		loader  *mockConfigLoader
+		region  string
+		wantApp bool
+		wantErr bool
+	}{
+		{
+			name:    "empty region",
+			loader:  nil,
+			region:  "",
+			wantApp: false,
+			wantErr: true,
+		},
+		{
+			name: "config loader error",
+			loader: &mockConfigLoader{
+				mockConfigErr: errors.New("test error"),
+			},
+			region:  "eu-west-1",
+			wantApp: false,
+			wantErr: true,
+		},
+		{
+			name: "success setup",
+			loader: &mockConfigLoader{
+				mockConfig: aws.Config{},
+			},
+			region:  "eu-west-1",
+			wantApp: true,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := NewApp(t.Context(), tt.region, tt.loader)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewApp() error = %v, wantErr %v", err, tt.wantErr)
+
+				return
+			}
+
+			if (got != nil) != tt.wantApp {
+				t.Errorf("got app = %v, want non-nil: %v", got, tt.wantApp)
 			}
 		})
 	}
