@@ -32,7 +32,11 @@ func main() {
 	slog.SetDefault(getLogger(os.Stderr, verbose))
 
 	if *showVersion {
-		slog.Info("veil", slog.String("version", version))
+		slog.Info(
+			"veil",
+			slog.String("repo", "https://github.com/wakeful/veil"),
+			slog.String("version", version),
+		)
 
 		return
 	}
@@ -70,10 +74,17 @@ func main() {
 	_, _ = os.Stdout.Write(marshal)
 }
 
+// ServiceIAM lists IAM roles via AWS SDK clients.
+type ServiceIAM interface {
+	iam.ListRolesAPIClient
+}
+
 // App represents a struct that provides functionality for interacting with the AWS IAM service.
 type App struct {
-	client *iam.Client
+	client ServiceIAM
 }
+
+var _ iam.ListRolesAPIClient = (ServiceIAM)(nil)
 
 // NewApp initialises and returns a new App instance configured with the provided region and context.
 func NewApp(ctx context.Context, region string) (*App, error) {

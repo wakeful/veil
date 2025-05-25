@@ -83,5 +83,11 @@ func mapFlip(input map[string][]string) map[string][]string {
 		}
 	}
 
+	for _, roles := range output {
+		if len(roles) > 1 {
+			sort.Strings(roles)
+		}
+	}
+
 	return output
 }

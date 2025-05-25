@@ -5,12 +5,14 @@ package main
 
 import (
 	"bytes"
+	_ "embed"
 	"log/slog"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 )
 
 func Test_mapFlip(t *testing.T) {
@@ -171,6 +173,148 @@ func Test_uniqSlice(t *testing.T) {
 
 			if got := uniqSlice(tt.input); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("uniqSlice() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+var (
+	//go:embed fixtures/AWSServiceRoleForECS.json
+	fixtureAWSServiceRoleForECS string
+	//go:embed fixtures/AWSReservedSSOFullAdmin.json
+	fixtureAWSReservedSSOFullAdmin string
+	//go:embed fixtures/EmptyAction.json
+	fixtureEmptyAction string
+	//go:embed fixtures/InvalidDataTypeNumber.json
+	fixtureInvalidDataTypeNumber string
+)
+
+func Test_decodeRoleTrust(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		role    types.Role
+		want    TrustPolicy
+		wantErr bool
+	}{
+		{
+			name: "failed to decode trust policy",
+			role: types.Role{
+				Arn:                      aws.String("arn:aws:iam::0123456789:trust/test"),
+				AssumeRolePolicyDocument: aws.String("test%2x"),
+			},
+			want:    TrustPolicy{},
+			wantErr: true,
+		},
+		{
+			name: "invalid trust policy",
+			role: types.Role{
+				Arn:                      aws.String("arn:aws:iam::0123456789:trust/test"),
+				AssumeRolePolicyDocument: aws.String("test"),
+			},
+			want:    TrustPolicy{},
+			wantErr: true,
+		},
+		{
+			name: "empty trust policy",
+			role: types.Role{
+				Arn:                      aws.String("arn:aws:iam::0123456789:trust/test"),
+				AssumeRolePolicyDocument: aws.String("{}"),
+			},
+			want:    TrustPolicy{},
+			wantErr: false,
+		},
+		{
+			name: "valid trust policy",
+			role: types.Role{
+				Arn: aws.String(
+					"arn:aws:iam::0123456789:role/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS",
+				),
+				AssumeRolePolicyDocument: aws.String(fixtureAWSServiceRoleForECS),
+			},
+			want: TrustPolicy{
+				Version: "2012-10-17",
+				Statement: []Statement{
+					{
+						Effect: "Allow",
+						Principal: Principal{
+							Service: Items{"ecs.amazonaws.com"},
+						},
+						Action: Items{"sts:AssumeRole"},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid trust policy with array",
+			role: types.Role{
+				Arn: aws.String(
+					"arn:aws:iam::0123456789:role/aws-reserved/sso.amazonaws.com/eu-west-1/AWSReservedSSO_FullAdmin",
+				),
+				AssumeRolePolicyDocument: aws.String(fixtureAWSReservedSSOFullAdmin),
+			},
+			want: TrustPolicy{
+				Version: "2012-10-17",
+				Statement: []Statement{
+					{
+						Effect: "Allow",
+						Principal: Principal{
+							Federated: Items{
+								"arn:aws:iam::0123456789:saml-provider/AWSSSO_24_DO_NOT_DELETE",
+								"arn:aws:iam::0123456789:saml-provider/AWSSSO_42_DO_NOT_DELETE",
+							},
+						},
+						Action: []string{"sts:AssumeRoleWithSAML", "sts:TagSession"},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "null action value",
+			role: types.Role{
+				Arn:                      aws.String("arn:aws:iam::0123456789:role/test-role"),
+				AssumeRolePolicyDocument: aws.String(fixtureEmptyAction),
+			},
+			want: TrustPolicy{
+				Version: "2012-10-17",
+				Statement: []Statement{
+					{
+						Effect: "Allow",
+						Principal: Principal{
+							Service: Items{"lambda.amazonaws.com"},
+						},
+						Action: nil,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid data type (number)",
+			role: types.Role{
+				Arn:                      aws.String("arn:aws:iam::0123456789:role/test-role"),
+				AssumeRolePolicyDocument: aws.String(fixtureInvalidDataTypeNumber),
+			},
+			want:    TrustPolicy{},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := decodeRoleTrust(tt.role)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("decodeRoleTrust() error = %v, wantErr %v", err, tt.wantErr)
+
+				return
+			}
+
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("decodeRoleTrust() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
