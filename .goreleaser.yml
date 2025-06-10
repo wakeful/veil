@@ -23,6 +23,17 @@ changelog:
       - '^docs:'
       - '^test:'
 archives:
-  - formats: ['tar.gz']
+  - formats: [ 'tar.gz' ]
     files:
       - LICENSE
+signs:
+  - id: archive-keyless
+    cmd: cosign
+    artifacts: archive
+    signature: ${artifact}.sigstore
+    output: false
+    args:
+      - "sign-blob"
+      - "--bundle=${signature}"
+      - "${artifact}"
+      - "-y"

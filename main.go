@@ -52,23 +52,9 @@ func main() {
 		return
 	}
 
-	output, err := client.getRolesWithTrust(ctx)
+	marshal, err := client.runScanIAM(ctx)
 	if err != nil {
-		slog.Error("failed to fetch IAM roles", slog.String("error", err.Error()))
-
-		return
-	}
-
-	flip := mapFlip(output)
-	slog.Debug(
-		"found IAM roles and principals",
-		slog.Int("roles", len(output)),
-		slog.Int("principals", len(flip)),
-	)
-
-	marshal, err := json.MarshalIndent(flip, "", "  ")
-	if err != nil {
-		slog.Error("failed to marshal output", slog.String("error", err.Error()))
+		slog.Error("failed to scan IAM roles", slog.String("error", err.Error()))
 
 		return
 	}
@@ -181,4 +167,25 @@ func (a *App) getRolesWithTrust(ctx context.Context) (map[string][]string, error
 	}
 
 	return output, nil
+}
+
+func (a *App) runScanIAM(ctx context.Context) ([]byte, error) {
+	output, err := a.getRolesWithTrust(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch IAM roles: %w", err)
+	}
+
+	flip := mapFlip(output)
+	slog.Debug(
+		"found IAM roles and principals",
+		slog.Int("roles", len(output)),
+		slog.Int("principals", len(flip)),
+	)
+
+	marshal, err := json.MarshalIndent(flip, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal output: %w", err)
+	}
+
+	return marshal, nil
 }

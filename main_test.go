@@ -147,7 +147,7 @@ func TestNewApp(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		loader  *mockConfigLoader
+		loader  ConfigLoader
 		region  string
 		wantApp bool
 		wantErr bool
@@ -169,10 +169,17 @@ func TestNewApp(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "success setup",
+			name: "success setup with mock config",
 			loader: &mockConfigLoader{
 				mockConfig: aws.Config{},
 			},
+			region:  "eu-west-1",
+			wantApp: true,
+			wantErr: false,
+		},
+		{
+			name:    "success setup with default config",
+			loader:  nil,
 			region:  "eu-west-1",
 			wantApp: true,
 			wantErr: false,
@@ -191,6 +198,78 @@ func TestNewApp(t *testing.T) {
 
 			if (got != nil) != tt.wantApp {
 				t.Errorf("got app = %v, want non-nil: %v", got, tt.wantApp)
+			}
+		})
+	}
+}
+
+func TestApp_runScanIAM(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		client  ServiceIAM
+		want    []byte
+		wantErr bool
+	}{
+		{
+			name: "success",
+			client: &MockServiceIAM{
+				mockRoles: []types.Role{
+					{
+						Arn: aws.String(
+							"arn:aws:iam::0123456789:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_FullAdmin",
+						),
+						AssumeRolePolicyDocument: aws.String(fixtureAWSReservedSSOFullAdmin),
+					},
+				},
+			},
+			want: []byte{
+				123, 10, 32, 32, 34, 97, 114, 110, 58, 97, 119, 115, 58, 105, 97, 109, 58, 58, 48, 49, 50, 51, 52, 53,
+				54, 55, 56, 57, 58, 115, 97, 109, 108, 45, 112, 114, 111, 118, 105, 100, 101, 114, 47, 65, 87, 83, 83,
+				83, 79, 95, 50, 52, 95, 68, 79, 95, 78, 79, 84, 95, 68, 69, 76, 69, 84, 69, 34, 58, 32, 91, 10, 32, 32,
+				32, 32, 34, 97, 114, 110, 58, 97, 119, 115, 58, 105, 97, 109, 58, 58, 48, 49, 50, 51, 52, 53, 54, 55,
+				56, 57, 58, 114, 111, 108, 101, 47, 97, 119, 115, 45, 114, 101, 115, 101, 114, 118, 101, 100, 47, 115,
+				115, 111, 46, 97, 109, 97, 122, 111, 110, 97, 119, 115, 46, 99, 111, 109, 47, 65, 87, 83, 82, 101, 115,
+				101, 114, 118, 101, 100, 83, 83, 79, 95, 70, 117, 108, 108, 65, 100, 109, 105, 110, 34, 10, 32, 32, 93,
+				44, 10, 32, 32, 34, 97, 114, 110, 58, 97, 119, 115, 58, 105, 97, 109, 58, 58, 48, 49, 50, 51, 52, 53,
+				54, 55, 56, 57, 58, 115, 97, 109, 108, 45, 112, 114, 111, 118, 105, 100, 101, 114, 47, 65, 87, 83, 83,
+				83, 79, 95, 52, 50, 95, 68, 79, 95, 78, 79, 84, 95, 68, 69, 76, 69, 84, 69, 34, 58, 32, 91, 10, 32, 32,
+				32, 32, 34, 97, 114, 110, 58, 97, 119, 115, 58, 105, 97, 109, 58, 58, 48, 49, 50, 51, 52, 53, 54, 55,
+				56, 57, 58, 114, 111, 108, 101, 47, 97, 119, 115, 45, 114, 101, 115, 101, 114, 118, 101, 100, 47, 115,
+				115, 111, 46, 97, 109, 97, 122, 111, 110, 97, 119, 115, 46, 99, 111, 109, 47, 65, 87, 83, 82, 101, 115,
+				101, 114, 118, 101, 100, 83, 83, 79, 95, 70, 117, 108, 108, 65, 100, 109, 105, 110, 34, 10, 32, 32, 93,
+				10, 125,
+			},
+			wantErr: false,
+		},
+		{
+			name: "failed to list roles",
+			client: &MockServiceIAM{
+				mockRoles:    []types.Role{},
+				mockRolesErr: errors.New("test error"),
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			a := &App{
+				client: tt.client,
+			}
+
+			got, err := a.runScanIAM(t.Context())
+			if (err != nil) != tt.wantErr {
+				t.Errorf("runScanIAM() error = %v, wantErr %v", err, tt.wantErr)
+
+				return
+			}
+
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("runScanIAM() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
