@@ -30,6 +30,7 @@ func TestItems_UnmarshalJSON(t *testing.T) {
 			t.Parallel()
 
 			var items Items
+
 			err := items.UnmarshalJSON(tt.input)
 
 			if tt.wantErr {

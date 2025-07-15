@@ -33,15 +33,14 @@ func (i *Items) UnmarshalJSON(data []byte) error {
 		single string
 		err    error
 	)
-
-	if err = json.Unmarshal(data, &single); err == nil {
+	if err = json.Unmarshal(data, &single); err == nil { //nolint:noinlineerr
 		*i = []string{single}
 
 		return nil
 	}
 
 	var many []string
-	if err = json.Unmarshal(data, &many); err == nil {
+	if err = json.Unmarshal(data, &many); err == nil { //nolint:noinlineerr
 		*i = many
 
 		return nil

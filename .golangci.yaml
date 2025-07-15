@@ -3,6 +3,7 @@ linters:
   default: all
   disable:
     - tagliatelle
+    - wsl # deprecated (since v2.2.0)
   settings:
     depguard:
       rules:

@@ -46,7 +46,9 @@ func decodeRoleTrust(role types.Role) (TrustPolicy, error) {
 	}
 
 	var policy TrustPolicy
-	if errUnmarshal := json.Unmarshal([]byte(data), &policy); errUnmarshal != nil {
+
+	errUnmarshal := json.Unmarshal([]byte(data), &policy)
+	if errUnmarshal != nil {
 		return TrustPolicy{}, fmt.Errorf("failed to unmarshal JSON: %w", errUnmarshal)
 	}
 

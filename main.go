@@ -162,7 +162,8 @@ func (a *App) getRolesWithTrust(ctx context.Context) (map[string][]string, error
 		}
 	}
 
-	if err := group.Wait(); err != nil {
+	err := group.Wait()
+	if err != nil {
 		return nil, fmt.Errorf("failed to process IAM roles trust policies: %w", err)
 	}
 
