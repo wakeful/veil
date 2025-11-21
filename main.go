@@ -29,6 +29,7 @@ func main() {
 	region := flag.String("region", "eu-west-1", "AWS region used for IAM communication")
 	showVersion := flag.Bool("version", false, "show version")
 	verbose := flag.Bool("verbose", false, "verbose log output")
+
 	flag.Parse()
 
 	slog.SetDefault(getLogger(os.Stderr, verbose))
