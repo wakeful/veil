@@ -33,6 +33,7 @@ func (i *Items) UnmarshalJSON(data []byte) error {
 		single string
 		err    error
 	)
+
 	if err = json.Unmarshal(data, &single); err == nil { //nolint:noinlineerr
 		*i = []string{single}
 
@@ -60,7 +61,7 @@ type TrustPolicy struct {
 
 // getAllPrincipals returns a deduplicated list of principals from the trust policy statements.
 func (p *TrustPolicy) getAllPrincipals() []string {
-	output := make([]string, 0)
+	output := make([]string, 0, len(p.Statement))
 	for _, statement := range p.Statement {
 		output = append(output, statement.Principal.getAll()...)
 	}
