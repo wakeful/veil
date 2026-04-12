@@ -24,16 +24,16 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - run: git fetch --force --tags
-      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
         with:
-          go-version: ">=1.26.0"
+          go-version: ">=1.26.1"
           cache: false
       - name: Install cosign
         uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5
       - uses: goreleaser/goreleaser-action@ec59f474b9834571250b370d4735c50f8e2d1e29
         with:
           distribution: goreleaser
-          version: "v2.14.1"
+          version: "v2.15.2"
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

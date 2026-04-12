@@ -33,7 +33,7 @@ var _ ServiceIAM = (*MockServiceIAM)(nil)
 
 func TestApp_getRolesWithTrust(t *testing.T) {
 	t.Parallel()
-	withTimeout, _ := context.WithTimeout(t.Context(), -time.Second) //nolint:govet
+	withTimeout, _ := context.WithTimeout(t.Context(), -time.Second) //nolint:govet,gosec
 	invalidRoles := []types.Role{
 		{
 			Arn:                      aws.String("arn:aws:iam::123456789012:role/test"),
