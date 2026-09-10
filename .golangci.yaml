@@ -2,6 +2,8 @@ version: "2"
 linters:
   default: all
   disable:
+    - exhaustruct # deprecated (since v2.13.0)
+    - gomodguard # deprecated (since v2.12.0)
     - tagliatelle
     - wsl # deprecated (since v2.2.0)
   settings:
@@ -19,8 +21,9 @@ linters:
     rules:
       - linters:
           - err113
-          - exhaustruct
+          - exhaustruct_v5
           - funlen
+          - goconst
           - varnamelen
         path: _test.go
 formatters:

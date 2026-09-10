@@ -24,7 +24,7 @@ Usage veil:
 
 ```shell
 # via the Go toolchain
-go install github.com/wakeful/veil
+go install github.com/wakeful/veil@latest
 ```
 
 #### Using a binary release

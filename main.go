@@ -73,7 +73,7 @@ type App struct {
 	client ServiceIAM
 }
 
-var _ iam.ListRolesAPIClient = (ServiceIAM)(nil)
+var _ iam.ListRolesAPIClient = ServiceIAM(nil)
 
 var errEmptyRegion = errors.New("region cannot be empty")
 
